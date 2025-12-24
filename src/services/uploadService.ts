@@ -154,6 +154,6 @@ export const uploadService = {
 
   // Get file URL for viewing
   getFileUrl(path: string): string {
-    return `http://localhost:5000${path}`;
+    return getApiUrl(path);
   }
 };

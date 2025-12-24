@@ -15,7 +15,13 @@ const SemesterCard = ({ semester }: SemesterCardProps) => {
   useEffect(() => {
     const fetchFileCount = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/materials?semester=${semester.id}`);
+        const { hasBackendAPI, API_BASE_URL } = await import('@/config/api');
+        if (!hasBackendAPI) {
+          setFileCount(0);
+          setIsLoading(false);
+          return;
+        }
+        const response = await fetch(`${API_BASE_URL}/materials?semester=${semester.id}`);
         if (response.ok) {
           const materials = await response.json();
           setFileCount(materials.length);

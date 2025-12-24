@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { API_BASE_URL, hasBackendAPI } from '@/config/api';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = API_BASE_URL;
 
 export interface DbMaterial {
   id: number;
