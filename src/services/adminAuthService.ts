@@ -14,6 +14,8 @@ export interface LoginResponse {
   user: AdminUser;
 }
 
+export interface SignupResponse extends LoginResponse {}
+
 export const adminAuthService = {
   // Login with custom credentials
   async login(email: string, password: string): Promise<LoginResponse> {
@@ -37,6 +39,28 @@ export const adminAuthService = {
       localStorage.setItem('adminToken', data.token);
     }
     
+    return data;
+  },
+
+  // Signup with secret (to prevent open registration)
+  async signup(email: string, password: string, secret: string): Promise<SignupResponse> {
+    const response = await fetch(`${API_URL}/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password, secret }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Signup failed');
+    }
+
+    const data = await response.json();
+    if (data.token) {
+      localStorage.setItem('adminToken', data.token);
+    }
     return data;
   },
 

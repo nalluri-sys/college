@@ -9,11 +9,21 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
 
-// Admin credentials (customize these)
-const ADMIN_CREDENTIALS = {
-  email: 'admin@vvit.edu',
-  password: 'admin123'
-};
+// Admin credentials storage (in-memory). In production, use a database.
+const admins = new Map();
+
+// Helper to add an admin
+function addAdmin(email, password) {
+  admins.set(email.toLowerCase(), { email, password });
+}
+
+// Seed default admin from env or fallback (change defaults in production)
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@vvit.edu';
+const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+addAdmin(DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD);
+
+// Optional signup secret to protect admin registration
+const ADMIN_SIGNUP_SECRET = process.env.ADMIN_SIGNUP_SECRET || 'change-me';
 
 // Simple token storage (in production, use a real database)
 const validTokens = new Set();
@@ -109,13 +119,53 @@ let materialIdCounter = 1;
 
 // Routes
 
-// Admin login with custom credentials
+// Admin signup (requires ADMIN_SIGNUP_SECRET)
+app.post('/api/auth/signup', (req, res) => {
+  try {
+    const { email, password, secret } = req.body;
+
+    if (!email || !password || !secret) {
+      return res.status(400).json({ error: 'Email, password, and secret are required' });
+    }
+
+    if (secret !== ADMIN_SIGNUP_SECRET) {
+      return res.status(403).json({ error: 'Invalid signup secret' });
+    }
+
+    const key = email.toLowerCase();
+    if (admins.has(key)) {
+      return res.status(409).json({ error: 'Admin already exists' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    addAdmin(email, password);
+    const token = generateToken();
+    validTokens.add(token);
+
+    setTimeout(() => validTokens.delete(token), 24 * 60 * 60 * 1000);
+
+    return res.json({
+      success: true,
+      message: 'Signup successful',
+      token,
+      user: { email, role: 'admin' }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    return res.status(500).json({ error: 'Signup failed' });
+  }
+});
+
+// Admin login with stored credentials
 app.post('/api/auth/login', (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate credentials
-    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+    const admin = admins.get((email || '').toLowerCase());
+    if (admin && admin.password === password) {
       const token = generateToken();
       validTokens.add(token);
 
@@ -129,16 +179,16 @@ app.post('/api/auth/login', (req, res) => {
         message: 'Login successful',
         token: token,
         user: {
-          email: email,
+          email: admin.email,
           role: 'admin'
         }
       });
-    } else {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid email or password'
-      });
     }
+
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid email or password'
+    });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'Login failed' });
