@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "start:server": "npm run build && node backend/server.js"
   },
   "homepage": "https://nalluri-sys.github.io/vvit-website/",
   "dependencies": {

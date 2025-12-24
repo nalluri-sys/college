@@ -8,6 +8,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
+const CLIENT_BUILD_PATH = path.join(__dirname, '..', 'dist');
 
 // Admin credentials storage (in-memory). In production, use a database.
 const admins = new Map();
@@ -45,6 +46,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, UPLOAD_DIR)));
+
+// Serve frontend build if available (enables single-port deploy)
+if (fs.existsSync(CLIENT_BUILD_PATH)) {
+  app.use(express.static(CLIENT_BUILD_PATH));
+}
 
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -285,6 +291,17 @@ app.post('/api/upload/multiple', verifyAdmin, upload.array('files', 12), (req, r
     res.status(500).json({ error: error.message });
   }
 });
+
+// SPA fallback to index.html for non-API routes
+if (fs.existsSync(CLIENT_BUILD_PATH)) {
+  app.get('*', (req, res) => {
+    // Skip API and uploads routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    return res.sendFile(path.join(CLIENT_BUILD_PATH, 'index.html'));
+  });
+}
 
 // Get all materials
 app.get('/api/materials', (req, res) => {
