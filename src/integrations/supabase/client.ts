@@ -2,13 +2,15 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY 
+// Only create client if credentials are provided
+// This allows the public site to work without Supabase (admin features will be disabled)
+export const supabase = (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) 
   ? createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       auth: {
         storage: localStorage,
@@ -16,4 +18,10 @@ export const supabase = SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY
         autoRefreshToken: true,
       }
     })
-  : null as any; // For deployment without Supabase, admin features won't work but public site will
+  : createClient<Database>('https://placeholder.supabase.co', 'placeholder-key', {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
